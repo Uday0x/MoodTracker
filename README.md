@@ -2,7 +2,7 @@
 
 
 A simple web project built using HTML, CSS, and JavaScript.
-
+![img alt](https://github.com/Uday0x/MoodTracker/blob/70c5ff1efe66d116b0d670263385379ac4157e5a/Screenshot%202025-03-20%20171000.png)
 
 
 
