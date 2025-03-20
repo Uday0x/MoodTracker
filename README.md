@@ -22,11 +22,12 @@ A simple web project built using HTML, CSS, and JavaScript.
    git clone https://mooodtraker.netlify.app/
 2. **Navigate the project folder**
    ```bash
-    cd 
+    cd MoodTracker
 ## Technologies Used
 - HTML
 - CSS3 
 - JavaScript 
 
 ## Deployment Link
+https://mooodtraker.netlify.app/
     
