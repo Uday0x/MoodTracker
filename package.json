@@ -1,0 +1,13 @@
+{
+  "name": "pollpulse-platform",
+  "version": "1.0.0",
+  "description": "Full-stack poll creation, sharing, response collection and real-time analytics platform.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
