@@ -37,8 +37,13 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow localhost on any port
+    // Allow localhost on any port (development)
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    
+    // Allow Render production domain
+    if (origin.includes('onrender.com')) {
       return callback(null, true);
     }
     
