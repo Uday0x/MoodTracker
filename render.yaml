@@ -1,33 +1,16 @@
 services:
-  # Backend API Service
   - type: web
-    name: pollpulse-backend
+    name: pollpulse
     runtime: node
     plan: free
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
+        value: 10000
       - key: MONGODB_URI
         scope: project
       - key: JWT_SECRET
         scope: project
-      - key: CORS_ORIGIN
-        value: https://pollpulse-frontend.onrender.com
-
-  # Frontend Static Site Service
-  - type: static_site
-    name: pollpulse-frontend
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
-    routes:
-      - path: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        value: https://pollpulse-backend.onrender.com/api
-      - key: VITE_SOCKET_URL
-        value: https://pollpulse-backend.onrender.com
