@@ -41,10 +41,12 @@ export default function Dashboard() {
     socket.on('analytics:update', (updatedAnalytics) => {
       console.log('📊 Analytics update received:', updatedAnalytics.totalResponses, 'responses');
       setAnalytics(updatedAnalytics);
-      // Also update the polls list to reflect new response count
+      // Update selected poll with new response count
+      setSelected(prev => prev ? { ...prev, responseCount: updatedAnalytics.totalResponses } : null);
+      // Also update the polls list
       setPolls(prev => prev.map(p => 
         p.id === selected.id 
-          ? { ...p, totalResponses: updatedAnalytics.totalResponses }
+          ? { ...p, totalResponses: updatedAnalytics.totalResponses, responseCount: updatedAnalytics.totalResponses }
           : p
       ));
     });
@@ -74,9 +76,12 @@ export default function Dashboard() {
         if (payload.analytics && payload.analytics.totalResponses !== analytics?.totalResponses) {
           console.log('🔄 Polling refresh - new responses:', payload.analytics.totalResponses);
           setAnalytics(payload.analytics);
+          // Update selected poll
+          setSelected(prev => prev ? { ...prev, responseCount: payload.analytics.totalResponses } : null);
+          // Update polls list
           setPolls(prev => prev.map(p => 
             p.id === selected.id 
-              ? { ...p, totalResponses: payload.analytics.totalResponses }
+              ? { ...p, totalResponses: payload.analytics.totalResponses, responseCount: payload.analytics.totalResponses }
               : p
           ));
         }
