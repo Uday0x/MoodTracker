@@ -11,11 +11,27 @@ const pollRoutes = require('./routes/pollRoutes');
 const app = express();
 
 // Calculate the correct path to frontend dist
-// backend/src/app.js -> go up to backend, then up to root, then into frontend/dist
-const frontendDist = path.resolve(path.join(__dirname, '../../frontend/dist'));
+// Try multiple possible locations
+let frontendDist;
+const possiblePaths = [
+  path.resolve(path.join(__dirname, '../../frontend/dist')), // backend/src/app.js -> ../../frontend/dist
+  path.resolve(path.join(__dirname, '../../../frontend/dist')), // if in different structure
+  path.resolve('frontend/dist'), // relative to cwd
+  path.resolve('/opt/render/project/frontend/dist'), // Render specific
+];
 
-console.log('Frontend dist path:', frontendDist);
-console.log('Frontend dist exists:', fs.existsSync(frontendDist));
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    frontendDist = p;
+    console.log('✓ Found frontend dist at:', frontendDist);
+    break;
+  }
+}
+
+if (!frontendDist) {
+  console.warn('⚠ Frontend dist not found! Checked:', possiblePaths);
+  frontendDist = possiblePaths[0]; // Use first option as fallback
+}
 
 // CORS configuration to allow all localhost origins during development
 app.use(cors({
@@ -50,32 +66,50 @@ app.use('/api/polls', pollRoutes);
 
 // Serve static files from frontend dist
 if (fs.existsSync(frontendDist)) {
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/')) {
+      console.log('📦 Serving asset:', req.path);
+    }
+    next();
+  });
+
   app.use(express.static(frontendDist, {
     dotfiles: 'ignore',
-    maxAge: '1d'
+    maxAge: '1d',
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        res.set('Cache-Control', 'no-cache');
+      }
+    }
   }));
   
   // Serve index.html for all non-API routes (SPA routing)
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return notFound(req, res);
-    res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
-      if (error) return next(error);
+    const indexPath = path.join(frontendDist, 'index.html');
+    console.log('📄 Serving index.html for:', req.path);
+    res.sendFile(indexPath, (error) => {
+      if (error) {
+        console.error('❌ Error serving index.html:', error.message);
+        return next(error);
+      }
     });
   });
 } else {
-  console.warn('Frontend dist folder not found at:', frontendDist);
+  console.error('❌ CRITICAL: Frontend dist folder not found at:', frontendDist);
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return notFound(req, res);
     res.status(200).send(`
       <html>
-        <body style="font-family: Arial; padding: 20px;">
-          <h1>Frontend Not Found</h1>
-          <p>The frontend build is not available at: ${frontendDist}</p>
-          <p>Available routes:</p>
+        <head><title>Frontend Build Missing</title></head>
+        <body style="font-family: Arial; padding: 20px; background: #f0f0f0;">
+          <h1>❌ Frontend Not Found</h1>
+          <p><strong>Debug Info:</strong></p>
+          <p>Expected path: ${frontendDist}</p>
+          <p>cwd: ${process.cwd()}</p>
+          <p><strong>Available routes:</strong></p>
           <ul>
-            <li>/api/health - API health check</li>
-            <li>/api/auth/* - Authentication endpoints</li>
-            <li>/api/polls/* - Polls endpoints</li>
+            <li><a href="/api/health">/api/health</a></li>
           </ul>
         </body>
       </html>
