@@ -10,6 +10,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "npm run build --prefix frontend",
     "build:all": "npm run build --prefix frontend",
+    "build:prod": "npm install --prefix frontend && npm run build --prefix frontend && npm install --production --prefix backend",
     "start": "npm start --prefix backend",
     "deploy": "npm run build --prefix frontend && npm start --prefix backend",
     "check": "node --check backend/src/server.js && node --check backend/src/app.js && node --check backend/src/config/env.js && node --check backend/src/config/database.js && node --check backend/src/models/User.js && node --check backend/src/models/Poll.js && node --check backend/src/controllers/authController.js && node --check backend/src/controllers/pollController.js && node --check backend/src/middleware/auth.js && node --check backend/src/middleware/errorHandler.js && node --check backend/src/routes/authRoutes.js && node --check backend/src/routes/pollRoutes.js && node --check backend/src/services/analyticsService.js && node --check backend/src/socket/index.js && node --check backend/src/utils/tokens.js"
