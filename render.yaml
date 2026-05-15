@@ -3,7 +3,7 @@ services:
     name: pollpulse
     runtime: node
     plan: free
-    buildCommand: npm run build:prod
+    buildCommand: npm install --include=dev --prefix frontend && npm run build --prefix frontend && npm install --production --prefix backend
     startCommand: npm start --prefix backend
     envVars:
       - key: NODE_ENV
