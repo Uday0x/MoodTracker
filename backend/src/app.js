@@ -50,7 +50,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
-app.use(optionalAuth);
+
+// Serve static files BEFORE auth middleware (don't auth static files)
+app.use(express.static(frontendDist));
+
+// Apply auth middleware only to API routes
+app.use('/api', optionalAuth);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'pollpulse-api' });
@@ -58,9 +63,6 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/polls', pollRoutes);
-
-// Serve static files
-app.use(express.static(frontendDist));
 
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (req, res, next) => {
