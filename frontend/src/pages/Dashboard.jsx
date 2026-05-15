@@ -30,7 +30,15 @@ export default function Dashboard() {
       transports: ['websocket', 'polling']
     });
     socket.emit('poll:subscribe', selected.id);
-    socket.on('analytics:update', setAnalytics);
+    socket.on('analytics:update', (updatedAnalytics) => {
+      setAnalytics(updatedAnalytics);
+      // Also update the polls list to reflect new response count
+      setPolls(prev => prev.map(p => 
+        p.id === selected.id 
+          ? { ...p, totalResponses: updatedAnalytics.totalResponses }
+          : p
+      ));
+    });
     socket.on('error', (err) => setError(`Socket error: ${err}`));
 
     return () => {
