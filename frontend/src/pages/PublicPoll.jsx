@@ -22,7 +22,24 @@ export default function PublicPoll() {
     loadPoll();
   }, [pollId]);
 
-  // Socket.io connection for real-time analytics
+  // Auto-fetch analytics after submission (only once)
+  useEffect(() => {
+    if (!submitted || !poll) return;
+    
+    const timer = setTimeout(async () => {
+      try {
+        const { poll: updatedPoll } = await apiGet(`/polls/${poll.id}`);
+        setPoll(updatedPoll);
+        if (updatedPoll.analytics) {
+          setAnalytics(updatedPoll.analytics);
+        }
+      } catch (err) {
+        console.error('Failed to reload poll:', err);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [submitted]); // Only re-run when submitted changes
   useEffect(() => {
     if (!poll) return;
 
@@ -193,7 +210,14 @@ export default function PublicPoll() {
               Thank you! Here are the current poll results.
             </p>
           </div>
-          {analytics && <AnalyticsSummary analytics={analytics} />}
+          {(analytics || poll.analytics) && <AnalyticsSummary analytics={analytics || poll.analytics} />}
+          {!analytics && !poll.analytics && (
+            <div className="card">
+              <div className="card-body text-center py-8">
+                <p className="text-slate-600">Loading results...</p>
+              </div>
+            </div>
+          )}
         </>
       ) : !isActive ? (
         <div className="card">
