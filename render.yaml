@@ -10,6 +10,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: CLIENT_URL
+        value: https://voices-1-kixy.onrender.com
       - key: MONGODB_URI
         scope: project
       - key: JWT_SECRET
