@@ -10,28 +10,23 @@ const pollRoutes = require('./routes/pollRoutes');
 
 const app = express();
 
-// Calculate the correct path to frontend dist
-// Try multiple possible locations
-let frontendDist;
-const possiblePaths = [
-  path.resolve(path.join(__dirname, '../../frontend/dist')), // backend/src/app.js -> ../../frontend/dist
-  path.resolve(path.join(__dirname, '../../../frontend/dist')), // if in different structure
-  path.resolve('frontend/dist'), // relative to cwd
-  path.resolve('/opt/render/project/frontend/dist'), // Render specific
-];
+// Frontend dist folder - use simple relative path from backend root
+// __dirname = backend/src
+// ../../frontend/dist = frontend/dist (2 levels up from src)
+const frontendDist = path.join(__dirname, '../../frontend/dist');
 
-for (const p of possiblePaths) {
-  if (fs.existsSync(p)) {
-    frontendDist = p;
-    console.log('✓ Found frontend dist at:', frontendDist);
-    break;
-  }
+console.log('='.repeat(60));
+console.log('📦 STATIC FILE SERVING DEBUG');
+console.log('='.repeat(60));
+console.log('__dirname:', __dirname);
+console.log('process.cwd():', process.cwd());
+console.log('frontendDist:', frontendDist);
+console.log('Exists:', fs.existsSync(frontendDist));
+if (fs.existsSync(frontendDist)) {
+  const files = fs.readdirSync(frontendDist);
+  console.log('Files in dist:', files);
 }
-
-if (!frontendDist) {
-  console.warn('⚠ Frontend dist not found! Checked:', possiblePaths);
-  frontendDist = possiblePaths[0]; // Use first option as fallback
-}
+console.log('='.repeat(60));
 
 // CORS configuration to allow all localhost origins during development
 app.use(cors({
@@ -64,58 +59,24 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/polls', pollRoutes);
 
-// Serve static files from frontend dist
-if (fs.existsSync(frontendDist)) {
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/assets/')) {
-      console.log('📦 Serving asset:', req.path);
-    }
-    next();
-  });
+// Serve static files
+app.use(express.static(frontendDist));
 
-  app.use(express.static(frontendDist, {
-    dotfiles: 'ignore',
-    maxAge: '1d',
-    setHeaders: (res, path) => {
-      if (path.endsWith('.html')) {
-        res.set('Cache-Control', 'no-cache');
-      }
-    }
-  }));
+// SPA fallback - serve index.html for all non-API routes
+app.get('*', (req, res, next) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api/')) {
+    return notFound(req, res);
+  }
   
-  // Serve index.html for all non-API routes (SPA routing)
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return notFound(req, res);
-    const indexPath = path.join(frontendDist, 'index.html');
-    console.log('📄 Serving index.html for:', req.path);
-    res.sendFile(indexPath, (error) => {
-      if (error) {
-        console.error('❌ Error serving index.html:', error.message);
-        return next(error);
-      }
-    });
+  const indexPath = path.join(frontendDist, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err.message);
+      res.status(404).send('Not Found');
+    }
   });
-} else {
-  console.error('❌ CRITICAL: Frontend dist folder not found at:', frontendDist);
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api')) return notFound(req, res);
-    res.status(200).send(`
-      <html>
-        <head><title>Frontend Build Missing</title></head>
-        <body style="font-family: Arial; padding: 20px; background: #f0f0f0;">
-          <h1>❌ Frontend Not Found</h1>
-          <p><strong>Debug Info:</strong></p>
-          <p>Expected path: ${frontendDist}</p>
-          <p>cwd: ${process.cwd()}</p>
-          <p><strong>Available routes:</strong></p>
-          <ul>
-            <li><a href="/api/health">/api/health</a></li>
-          </ul>
-        </body>
-      </html>
-    `);
-  });
-}
+});
 
 app.use(notFound);
 app.use(errorHandler);
