@@ -22,6 +22,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!selected) return;
 
+    console.log('🔌 Connecting Socket.io for poll:', selected.id);
+    
     const socket = io(SOCKET_URL, { 
       reconnection: true,
       reconnectionDelay: 1000,
@@ -29,8 +31,15 @@ export default function Dashboard() {
       reconnectionAttempts: 5,
       transports: ['websocket', 'polling']
     });
-    socket.emit('poll:subscribe', selected.id);
+    
+    socket.on('connect', () => {
+      console.log('✅ Socket.io connected');
+      socket.emit('poll:subscribe', selected.id);
+      console.log('📍 Subscribed to poll:', selected.id);
+    });
+    
     socket.on('analytics:update', (updatedAnalytics) => {
+      console.log('📊 Analytics update received:', updatedAnalytics.totalResponses, 'responses');
       setAnalytics(updatedAnalytics);
       // Also update the polls list to reflect new response count
       setPolls(prev => prev.map(p => 
@@ -39,12 +48,44 @@ export default function Dashboard() {
           : p
       ));
     });
-    socket.on('error', (err) => setError(`Socket error: ${err}`));
+    
+    socket.on('error', (err) => {
+      console.error('❌ Socket error:', err);
+      setError(`Socket error: ${err}`);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('🔴 Socket.io disconnected');
+    });
 
     return () => {
       socket.emit('poll:unsubscribe', selected.id);
       socket.disconnect();
     };
+  }, [selected]);
+
+  // Polling fallback - refresh analytics every 2 seconds
+  useEffect(() => {
+    if (!selected) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const payload = await apiGet(`/polls/${selected.id}/analytics`);
+        if (payload.analytics && payload.analytics.totalResponses !== analytics?.totalResponses) {
+          console.log('🔄 Polling refresh - new responses:', payload.analytics.totalResponses);
+          setAnalytics(payload.analytics);
+          setPolls(prev => prev.map(p => 
+            p.id === selected.id 
+              ? { ...p, totalResponses: payload.analytics.totalResponses }
+              : p
+          ));
+        }
+      } catch (err) {
+        // Silent fail for polling
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, [selected]);
 
   const loadPolls = async () => {
