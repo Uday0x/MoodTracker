@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { apiGet, apiPost } from '../api/client';
 import AnalyticsSummary from '../components/AnalyticsSummary';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
 export default function Dashboard() {
   const [polls, setPolls] = useState([]);
@@ -22,7 +22,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!selected) return;
 
-    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+    const socket = io(SOCKET_URL, { 
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      transports: ['websocket', 'polling']
+    });
     socket.emit('poll:subscribe', selected.id);
     socket.on('analytics:update', setAnalytics);
     socket.on('error', (err) => setError(`Socket error: ${err}`));

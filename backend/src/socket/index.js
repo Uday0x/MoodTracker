@@ -8,7 +8,22 @@ let io;
 function initializeSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: env.clientUrl,
+      origin: function (origin, callback) {
+        // Allow localhost (development)
+        if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+          return callback(null, true);
+        }
+        // Allow Render production domain
+        if (origin && origin.includes('onrender.com')) {
+          return callback(null, true);
+        }
+        // Allow configured origins
+        const allowedOrigins = Array.isArray(env.clientUrl) ? env.clientUrl : [env.clientUrl];
+        if (origin && allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        callback(null, true); // Allow all for WebSocket
+      },
       credentials: true
     }
   });
