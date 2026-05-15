@@ -28,6 +28,9 @@ if (fs.existsSync(frontendDist)) {
 }
 console.log('='.repeat(60));
 
+// Serve static files FIRST (before CORS checks)
+app.use(express.static(frontendDist));
+
 // CORS configuration to allow all localhost origins during development
 app.use(cors({
   origin: function (origin, callback) {
@@ -50,24 +53,6 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
-
-// Serve static files BEFORE auth middleware (don't auth static files)
-app.use(express.static(frontendDist, {
-  // Add error handler for static files
-  onError: (err, req, res) => {
-    console.error('📁 Static file error for', req.path, ':', err.message);
-    res.status(500).send('Internal Server Error');
-  }
-}));
-
-// Error handler for static file issues
-app.use((err, req, res, next) => {
-  if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
-    console.error('⚠️ Static asset error:', req.path, err.message);
-    return res.status(500).send('Asset Error');
-  }
-  next(err);
-});
 
 // Apply auth middleware only to API routes
 app.use('/api', optionalAuth);
