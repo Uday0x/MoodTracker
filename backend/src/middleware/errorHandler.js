@@ -3,6 +3,15 @@ function notFound(req, res) {
 }
 
 function errorHandler(error, req, res, next) {
+  // Log all errors for debugging
+  console.error('❌ ERROR HANDLER:', {
+    path: req.path,
+    method: req.method,
+    message: error.message,
+    code: error.code,
+    stack: error.stack
+  });
+
   if (res.headersSent) return next(error);
 
   if (error.name === 'ValidationError') {
