@@ -95,7 +95,9 @@ async function getPublicPoll(req, res, next) {
     if (!poll) return res.status(404).json({ error: 'Poll not found.' });
 
     const isCreator = req.user && poll.creator.toString() === req.user._id.toString();
-    const includeAnalytics = poll.published || isCreator;
+    // Include analytics if: published OR creator OR poll is active (accepting responses)
+    const status = getPollStatus(poll);
+    const includeAnalytics = poll.published || isCreator || status === 'active';
     return res.json({ poll: serializePoll(poll, includeAnalytics) });
   } catch (error) {
     return next(error);
