@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { apiGet, apiPost } from '../api/client';
 import AnalyticsSummary from '../components/AnalyticsSummary';
 import { useAuth } from '../context/AuthContext';
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
 export default function PublicPoll() {
   const { pollId } = useParams();
@@ -13,10 +16,39 @@ export default function PublicPoll() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
     loadPoll();
   }, [pollId]);
+
+  // Socket.io connection for real-time analytics
+  useEffect(() => {
+    if (!poll) return;
+
+    const socket = io(SOCKET_URL, { 
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      transports: ['websocket', 'polling']
+    });
+    
+    socket.emit('poll:subscribe', poll.id);
+    socket.on('analytics:update', (updatedAnalytics) => {
+      setAnalytics(updatedAnalytics);
+      // Update poll with new analytics
+      setPoll(prev => ({
+        ...prev,
+        analytics: updatedAnalytics
+      }));
+    });
+
+    return () => {
+      socket.emit('poll:unsubscribe', poll.id);
+      socket.disconnect();
+    };
+  }, [poll?.id]);
 
   const loadPoll = async () => {
     try {
@@ -44,13 +76,16 @@ export default function PublicPoll() {
 
     setSubmitting(true);
     try {
-      await apiPost(`/polls/${poll.id}/responses`, {
+      const response = await apiPost(`/polls/${poll.id}/responses`, {
         answers: Object.entries(answers).map(([questionId, optionId]) => ({
           questionId,
           optionId,
         })),
       });
       setSubmitted(true);
+      if (response.analytics) {
+        setAnalytics(response.analytics);
+      }
       setError('');
     } catch (err) {
       setError(err.message);
@@ -146,7 +181,19 @@ export default function PublicPoll() {
               Thank you for your feedback. Here are the final results.
             </p>
           </div>
-          <AnalyticsSummary analytics={poll.analytics} />
+          <AnalyticsSummary analytics={analytics || poll.analytics} />
+        </>
+      ) : submitted ? (
+        <>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              Live Poll Results
+            </h2>
+            <p className="text-slate-600">
+              Thank you! Here are the current poll results.
+            </p>
+          </div>
+          {analytics && <AnalyticsSummary analytics={analytics} />}
         </>
       ) : !isActive ? (
         <div className="card">
